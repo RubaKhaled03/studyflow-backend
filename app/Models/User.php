@@ -26,6 +26,11 @@ class User extends Authenticatable
         'theme_preference',
         'focus_preferences',
         'reminder_preferences',
+        'streak_current',
+        'streak_longest',
+        'streak_last_active_date',
+        'streak_active_days',
+
     ];
 
     protected $hidden = [
@@ -41,6 +46,7 @@ class User extends Authenticatable
             'onboarding_completed' => 'boolean',
             'focus_preferences' => 'array',
             'reminder_preferences' => 'array',
+            'streak_active_days'     => 'array',
         ];
     }
     public function semesters()

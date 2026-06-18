@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/setup',   [AuthController::class, 'setup']);
         Route::post('/logout',  [AuthController::class, 'logout']);
         Route::patch('/profile', [AuthController::class, 'updateProfile']);
+        Route::post('/streak', [AuthController::class, 'updateStreak']);
         });
 
     Route::apiResource('semesters',   SemesterController::class);

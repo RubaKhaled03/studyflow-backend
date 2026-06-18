@@ -163,6 +163,32 @@ public function updateProfile(Request $request)
             ],
             'createdAt'              => $user->created_at,
             'updatedAt'              => $user->updated_at,
-        ];
+        'streak' => [
+    'currentCount'   => $user->streak_current ?? 0,
+    'longestCount'   => $user->streak_longest ?? 0,
+    'lastActiveDate' => $user->streak_last_active_date ?? '',
+    'activeDays'     => $user->streak_active_days ?? [],
+],
+            ];
+
     }
+    // POST /api/auth/streak
+public function updateStreak(Request $request)
+{
+    $request->validate([
+        'currentCount'   => 'required|integer',
+        'longestCount'   => 'required|integer',
+        'lastActiveDate' => 'required|string',
+        'activeDays'     => 'nullable|array',
+    ]);
+
+    $request->user()->update([
+        'streak_current'           => $request->currentCount,
+        'streak_longest'           => $request->longestCount,
+        'streak_last_active_date'  => $request->lastActiveDate,
+        'streak_active_days'       => $request->activeDays ?? [],
+    ]);
+
+    return response()->json($this->formatUser($request->user()->fresh()));
+}
 }
