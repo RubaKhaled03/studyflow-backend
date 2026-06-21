@@ -79,7 +79,8 @@ public function updateProfile(Request $request)
         'themePreference'        => 'sometimes|nullable|string|in:light,dark,system',
         'focusPreferences'       => 'sometimes|nullable|array',
         'reminderPreferences'    => 'sometimes|nullable|array',
-    ]);
+        'onboardingCompleted'    => 'sometimes|nullable|boolean',
+        ]);
 
     $data = [];
 
@@ -94,7 +95,7 @@ public function updateProfile(Request $request)
     if ($request->has('themePreference')) $data['theme_preference'] = $request->themePreference;
     if ($request->has('focusPreferences')) $data['focus_preferences'] = $request->focusPreferences;
     if ($request->has('reminderPreferences')) $data['reminder_preferences'] = $request->reminderPreferences;
-
+    if ($request->has('onboardingCompleted')) $data['onboarding_completed'] = $request->onboardingCompleted;
     $request->user()->update($data);
 
     return response()->json($this->formatUser($request->user()->fresh()));
