@@ -8,18 +8,33 @@ use Illuminate\Http\Request;
 class NotificationController extends Controller
 {
     // GET /api/notifications
-    public function index(Request $request)
-    {
-        $this->generateTaskReminders($request->user());
+   public function index(Request $request)
+{
+    $user = $request->user();
 
-        $notifications = $request->user()->notifications()
-            ->orderBy('created_at', 'desc')
-            ->get();
+    $tasks = $user->tasks()
+        ->where('reminder_enabled', true)
+        ->where('status', '!=', 'done')
+        ->whereNull('reminder_sent_at')
+        ->whereNotNull('due_date')
+        ->get();
 
-        return response()->json($notifications->map(fn($n) => $this->formatNotification($n)));
-    }
 
-    // بيفحص الـ tasks اللي قربت ومستحقة تنبيه، وبيولّد notification لكل واحدة لسه ما تنبّهت
+
+    $this->generateTaskReminders($user);
+
+    $notifications = $user->notifications()
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+
+
+    return response()->json($notifications->map(fn($n) => $this->formatNotification($n)));
+}
+    /**
+     * بيفحص الـ tasks اللي قربت ومستحقة تنبيه، وبيولّد notification لكل واحدة لسه ما تنبّهت.
+     * الـ window = من وقت الـ reminder لغاية 24 ساعة بعد الـ due date (عشان ما يفوت تنبيه).
+     */
     private function generateTaskReminders($user): void
     {
         $now = now();
@@ -32,27 +47,40 @@ class NotificationController extends Controller
             ->get();
 
         foreach ($tasks as $task) {
-            $dueAt = \Illuminate\Support\Carbon::parse(
-                $task->due_date . ' ' . ($task->due_time ?? '09:00')
-            );
+           $dueAt = \Illuminate\Support\Carbon::parse(
+    $task->due_date . ' ' . ($task->due_time ?? '23:59'),
+    'Asia/Hebron'
+)->utc();
 
             $minutesBefore = match ($task->reminder_timing_unit) {
-                'minutes' => $task->reminder_timing_value,
-                'hours'   => $task->reminder_timing_value * 60,
-                'days'    => $task->reminder_timing_value * 60 * 24,
-                default   => 0,
+                'minutes' => (int) $task->reminder_timing_value,
+                'hours'   => (int) $task->reminder_timing_value * 60,
+                'days'    => (int) $task->reminder_timing_value * 60 * 24,
+                default   => 60, // default: hour before
             };
 
             $reminderAt = $dueAt->copy()->subMinutes($minutesBefore);
 
-            // لسه بدري، أو الموعد فات بدون ما نلحق - بالحالتين منتجاهل
-            if ($now->lt($reminderAt) || $now->gt($dueAt)) {
+            // لسه بدري — ما يجي وقت التنبيه
+            if ($now->lt($reminderAt)) {
                 continue;
             }
 
+            // الـ task فات أكثر من 24 ساعة — تأخر كثير، تجاهل
+            if ($now->gt($dueAt->copy()->addHours(24))) {
+                // نعلّم إنه أُرسل حتى ما نكرره لاحقاً
+                $task->update(['reminder_sent_at' => $now]);
+                continue;
+            }
+
+            $isOverdue = $now->gt($dueAt);
+            $message = $isOverdue
+                ? 'This task was due ' . $dueAt->diffForHumans() . ' — don\'t forget to complete it!'
+                : 'This task is due ' . $dueAt->diffForHumans();
+
             $user->notifications()->create([
-                'title'        => 'Upcoming: ' . $task->title,
-                'message'      => 'This task is due ' . $dueAt->diffForHumans(),
+                'title'        => ($isOverdue ? '⚠️ Overdue: ' : '⏰ Upcoming: ') . $task->title,
+                'message'      => $message,
                 'type'         => in_array($task->type, ['exam', 'quiz']) ? 'exam' : 'task',
                 'target_route' => '/tasks',
                 'target_id'    => (string) $task->id,
@@ -87,7 +115,6 @@ class NotificationController extends Controller
     }
 
     // PATCH /api/notifications/{id}
-    // بنستخدمها لتعليم notification واحدة كـ "مقروءة"
     public function update(Request $request, $id)
     {
         $notification = $request->user()->notifications()->findOrFail($id);
@@ -121,7 +148,6 @@ class NotificationController extends Controller
     }
 
     // DELETE /api/notifications
-    // بنستخدمها لمسح كل notifications اليوزر (زر "Clear all")
     public function destroyAll(Request $request)
     {
         $request->user()->notifications()->delete();
