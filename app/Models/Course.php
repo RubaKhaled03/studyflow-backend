@@ -49,5 +49,9 @@ protected function casts(): array
     ];
 
 }
+public function examModeStates()
+    {
+        return $this->hasMany(ExamModeState::class);
+    }
 
 }

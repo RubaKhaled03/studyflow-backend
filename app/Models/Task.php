@@ -24,7 +24,20 @@ class Task extends Model
         'priority',
         'status',
         'notes',
+        'reminder_enabled',
+        'reminder_timing_value',
+        'reminder_timing_unit',
+        'reminder_channel',
+        'reminder_sent_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'reminder_enabled' => 'boolean',
+            'reminder_sent_at' => 'datetime',
+        ];
+    }
 
     public function user(): BelongsTo
     {

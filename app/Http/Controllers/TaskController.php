@@ -32,6 +32,7 @@ class TaskController extends Controller
     }
 
     // POST /api/tasks
+   // POST /api/tasks
     public function store(Request $request)
     {
         $request->validate([
@@ -45,7 +46,14 @@ class TaskController extends Controller
             'courseId'     => 'nullable|exists:courses,id',
             'description'  => 'nullable|string',
             'notes'        => 'nullable|string',
+            'reminderConfig' => 'nullable|array',
+            'reminderConfig.enabled'     => 'nullable|boolean',
+            'reminderConfig.timingValue' => 'nullable|integer',
+            'reminderConfig.timingUnit'  => 'nullable|in:minutes,hours,days',
+            'reminderConfig.channel'     => 'nullable|in:in-app,email,both',
         ]);
+
+        $reminder = $request->reminderConfig ?? [];
 
         $task = $request->user()->tasks()->create([
             'course_id'                  => $request->courseId,
@@ -63,11 +71,14 @@ class TaskController extends Controller
             'priority'                   => $request->priority ?? 'medium',
             'status'                     => $request->status ?? 'todo',
             'notes'                      => $request->notes,
+            'reminder_enabled'           => $reminder['enabled'] ?? false,
+            'reminder_timing_value'      => $reminder['timingValue'] ?? null,
+            'reminder_timing_unit'       => $reminder['timingUnit'] ?? null,
+            'reminder_channel'           => $reminder['channel'] ?? null,
         ]);
 
         return response()->json($this->formatTask($task), 201);
     }
-
     // GET /api/tasks/{id}
     public function show(Request $request, $id)
     {
@@ -76,7 +87,7 @@ class TaskController extends Controller
         return response()->json($this->formatTask($task));
     }
 
-    // PATCH /api/tasks/{id}
+   // PATCH /api/tasks/{id}
     public function update(Request $request, $id)
     {
         $task = $request->user()->tasks()->findOrFail($id);
@@ -88,7 +99,14 @@ class TaskController extends Controller
             'dueDate'  => 'nullable|date',
             'dueTime'  => 'nullable|string',
             'notes'    => 'nullable|string',
+            'reminderConfig' => 'nullable|array',
+            'reminderConfig.enabled'     => 'nullable|boolean',
+            'reminderConfig.timingValue' => 'nullable|integer',
+            'reminderConfig.timingUnit'  => 'nullable|in:minutes,hours,days',
+            'reminderConfig.channel'     => 'nullable|in:in-app,email,both',
         ]);
+
+        $reminder = $request->reminderConfig;
 
         $task->update([
             'title'    => $request->title ?? $task->title,
@@ -98,6 +116,14 @@ class TaskController extends Controller
             'due_time' => $request->dueTime ?? $task->due_time,
             'notes'    => $request->notes ?? $task->notes,
             'description' => $request->description ?? $task->description,
+            'reminder_enabled'      => $reminder['enabled'] ?? $task->reminder_enabled,
+            'reminder_timing_value' => $reminder['timingValue'] ?? $task->reminder_timing_value,
+            'reminder_timing_unit'  => $reminder['timingUnit'] ?? $task->reminder_timing_unit,
+            'reminder_channel'      => $reminder['channel'] ?? $task->reminder_channel,
+            // لو الطالب غيّر موعد الـ task أو إعدادات الـ reminder، منفسح الطريق لتنبيه جديد
+            'reminder_sent_at' => ($request->has('dueDate') || $request->has('dueTime') || $request->has('reminderConfig'))
+                ? null
+                : $task->reminder_sent_at,
         ]);
 
         return response()->json($this->formatTask($task->fresh()));
@@ -131,6 +157,12 @@ class TaskController extends Controller
             'priority'                 => $t->priority,
             'status'                   => $t->status,
             'notes'                    => $t->notes,
+            'reminderConfig'           => [
+                'enabled'     => $t->reminder_enabled,
+                'timingValue' => $t->reminder_timing_value,
+                'timingUnit'  => $t->reminder_timing_unit,
+                'channel'     => $t->reminder_channel,
+            ],
             'createdAt'                => $t->created_at,
             'updatedAt'                => $t->updated_at,
         ];

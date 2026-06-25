@@ -9,11 +9,15 @@ use App\Http\Controllers\ReflectionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WeekItemController;
 use App\Http\Controllers\Api\FocusSessionController;
+use App\Http\Controllers\ExamModeController;
+use App\Http\Controllers\NotificationController;
 
 // Public routes
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login',    [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 });
 
 // Protected routes
@@ -54,4 +58,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/sessions/{id}', [FocusSessionController::class, 'destroy']);
         Route::get('/analytics', [FocusSessionController::class, 'analytics']);
         });
+
+    Route::prefix('courses/{courseId}/exam-mode/{examId}')->group(function () {
+        Route::get('/', [ExamModeController::class, 'show']);
+        Route::patch('/', [ExamModeController::class, 'update']);
+        Route::post('/topics', [ExamModeController::class, 'storeTopic']);
+        Route::patch('/topics/{topicId}', [ExamModeController::class, 'updateTopic']);
+        Route::delete('/topics/{topicId}', [ExamModeController::class, 'destroyTopic']);
+    });
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::post('/', [NotificationController::class, 'store']);
+        Route::patch('/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::patch('/{id}', [NotificationController::class, 'update']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+        Route::delete('/', [NotificationController::class, 'destroyAll']);
+    });
 });

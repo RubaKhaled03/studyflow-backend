@@ -74,4 +74,14 @@ class User extends Authenticatable
 {
     return $this->hasMany(FocusSession::class);
 }
+    public function examModeStates()
+    {
+        return $this->hasMany(ExamModeState::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
 }
+
